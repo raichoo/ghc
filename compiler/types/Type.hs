@@ -1121,7 +1121,8 @@ repSplitTyConApp_maybe (FunTy arg res)
   = Just (funTyCon, [rep1, rep2, arg, res])
   | otherwise
   = pprPanic "repSplitTyConApp_maybe"
-             (ppr arg $$ ppr res $$ ppr (typeKind res))
+             (ppr arg <+> dcolon <+> ppr (typeKind arg) $$
+              ppr res <+> dcolon <+> ppr (typeKind res))
 repSplitTyConApp_maybe _ = Nothing
 
 -- | Attempts to tease a list type apart and gives the type of the elements if

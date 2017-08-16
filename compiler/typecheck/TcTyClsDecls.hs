@@ -2165,7 +2165,8 @@ mkGADTVars tmpl_tvs dc_tvs subst
 
                -- not a simple substitution. make an equality predicate
           _ -> choose (t_tv':univs) (mkEqSpec t_tv' r_ty : eqs)
-                      t_sub r_sub t_tvs
+                      (extendTvSubst t_sub t_tv (mkTyVarTy t_tv'))
+                      r_sub t_tvs
             where t_tv' = updateTyVarKind (substTy t_sub) t_tv
 
       | otherwise
