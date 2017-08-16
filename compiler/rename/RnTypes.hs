@@ -1575,10 +1575,8 @@ extractHsTyRdrTyVars :: LHsType GhcPs -> RnM FreeKiTyVars
 -- occurrence is returned.
 -- See Note [Kind and type-variable binders]
 extractHsTyRdrTyVars ty
-  = do { FKTV kis tys <- extract_lty TypeLevel ty emptyFKTV
-       ; return (FKTV (nubL kis)
-                      (nubL tys)) }
-
+  = do { fvs <- extract_lty TypeLevel ty emptyFKTV
+       ; return (rmDupsInRdrTyVars fvs) }
 
 -- | Extracts free type and kind variables from types in a list.
 -- When the same name occurs multiple times in the types, only the first
@@ -1598,7 +1596,10 @@ extractHsTysRdrTyVarsDups tys
 -- | Removes multiple occurrences of the same name from FreeKiTyVars.
 rmDupsInRdrTyVars :: FreeKiTyVars -> FreeKiTyVars
 rmDupsInRdrTyVars (FKTV kis tys)
-  = FKTV (nubL kis) (nubL tys)
+  = FKTV kis' tys'
+  where
+    kis' = nubL kis
+    tys' = nubL (filterOut (`elemRdr` kis') tys)
 
 extractRdrKindSigVars :: LFamilyResultSig GhcPs -> RnM [Located RdrName]
 extractRdrKindSigVars (L _ resultSig)
