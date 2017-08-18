@@ -1536,8 +1536,34 @@ In general we want to walk over a type, and find
 
 Hence we returns a pair (kind-vars, type vars)
 See also Note [HsBSig binder lists] in HsTypes
+
+Most clients of this code just want to know the kind/type vars, without
+duplicates. The function rmDupsInRdrTyVars removes duplicates. That function
+also makes sure that no variable is reported as both a kind var and
+a type var, preferring kind vars. Why kind vars? Consider this:
+
+ foo :: forall (a :: k). Proxy k -> Proxy a -> ...
+
+Should that be accepted?
+
+Normally, if a type signature has an explicit forall, it must list *all*
+tyvars mentioned in the type. But there's an exception for tyvars mentioned in
+a kind, as k is above. Note that k is also used "as a type variable", as the
+argument to the first Proxy. So, do we consider k to be type-variable-like and
+require it in the forall? Or do we consider k to be kind-variable-like and not
+require it?
+
+It's not just in type signatures: kind variables are implicitly brought into
+scope in a variety of places. Should vars used at both the type level and kind
+level be treated this way?
+
+GHC indeed allows kind variables to be brought into scope implicitly even when
+the kind variable is also used as a type variable. Thus, we must prefer to keep
+a variable listed as a kind var in rmDupsInRdrTyVars.
+
 -}
 
+-- See Note [Kind and type-variable binders]
 data FreeKiTyVars = FKTV { fktv_kis    :: [Located RdrName]
                          , fktv_tys    :: [Located RdrName] }
 
@@ -1594,6 +1620,7 @@ extractHsTysRdrTyVarsDups tys
   = extract_ltys TypeLevel tys emptyFKTV
 
 -- | Removes multiple occurrences of the same name from FreeKiTyVars.
+-- See also Note [Kind and type-variable binders]
 rmDupsInRdrTyVars :: FreeKiTyVars -> FreeKiTyVars
 rmDupsInRdrTyVars (FKTV kis tys)
   = FKTV kis' tys'
