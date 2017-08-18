@@ -1791,6 +1791,8 @@ tcTyClTyVars tycon_name thing_inside
     --   type Syn k = forall (a :: k). Proxy a
     -- At first, it looks like k should be named -- after all, it appears on the RHS.
     -- However, the correct kind for Syn is (* -> *).
+    -- (Why? Because k is the kind of a type, so k's kind is *. And the RHS also has
+    -- kind *.) See also #13963.
     correct_binders :: [TyConBinder] -> Kind -> [TyConBinder]
     correct_binders binders kind
       = binders'
