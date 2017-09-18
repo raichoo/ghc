@@ -156,6 +156,17 @@ endif
 rts_dist_$1_CC_OPTS += -DDYNAMIC
 endif
 
+ifeq "$(USE_DTRACE)" "YES"
+ifeq "$$(TargetOS_CPP)" "freebsd"
+ifneq "$$(findstring dyn, $1)" ""
+rts_dist_$1_HC_OPTS += -DDTRACE
+rts_dist_$1_CC_OPTS += -DDTRACE
+endif
+else
+rts_dist_$1_HC_OPTS += -DDTRACE
+rts_dist_$1_CC_OPTS += -DDTRACE
+endif
+endif
 
 $(call distdir-way-opts,rts,dist,$1,1) # 1 because the rts is built with stage1
 $(call c-suffix-rules,rts,dist,$1,YES)
@@ -170,8 +181,10 @@ rts_$1_CMM_OBJS = $$(patsubst rts/%.cmm,rts/dist/build/%.$$($1_osuf),$$(rts_CMM_
 
 rts_$1_OBJS = $$(rts_$1_C_OBJS) $$(rts_$1_S_OBJS) $$(rts_$1_CMM_OBJS)
 
-ifneq "$$(findstring linux solaris2, $(TargetOS_CPP))" ""
+ifneq "$$(findstring $(TargetOS_CPP), linux solaris2 freebsd)" ""
 NEED_DTRACE_PROBES_OBJ = YES
+else
+NEED_DTRACE_PROBES_OBJ = NO
 endif
 
 ifeq "$(USE_DTRACE)" "YES"
@@ -179,11 +192,25 @@ ifeq "$(NEED_DTRACE_PROBES_OBJ)" "YES"
 # On Darwin we don't need to generate binary containing probes defined
 # in DTrace script, but DTrace on Solaris expects generation of binary
 # from the DTrace probes definitions
-rts_$1_DTRACE_OBJS = rts/dist/build/RtsProbes.$$($1_osuf)
 
+ifneq "$$(findstring $(TargetOS_CPP), freebsd)" ""
+
+ifneq "$$(findstring dyn, $1)" ""
+rts_$1_DTRACE_OBJS = rts/dist/build/RtsProbes.$$($1_osuf)
 rts/dist/build/RtsProbes.$$($1_osuf) : $$(rts_$1_OBJS)
 	$(DTRACE) -G -C $$(addprefix -I,$$(GHC_INCLUDE_DIRS)) -DDTRACE -s rts/RtsProbes.d -o \
 		$$@ $$(rts_$1_OBJS)
+else
+rts_$1_DTRACE_OBJS =
+endif
+
+else
+rts_$1_DTRACE_OBJS = rts/dist/build/RtsProbes.$$($1_osuf)
+rts/dist/build/RtsProbes.$$($1_osuf) : $$(rts_$1_OBJS)
+	$(DTRACE) -G -C $$(addprefix -I,$$(GHC_INCLUDE_DIRS)) -DDTRACE -s rts/RtsProbes.d -o \
+		$$@ $$(rts_$1_OBJS)
+endif
+
 endif
 endif
 
@@ -528,9 +555,6 @@ endif
 # compile dtrace probes if dtrace is supported
 
 ifeq "$(USE_DTRACE)" "YES"
-
-rts_CC_OPTS		+= -DDTRACE
-rts_HC_OPTS		+= -DDTRACE
 
 # Apple's dtrace (the only one supported by ghc at the moment) uses
 # gcc as its preprocessor. If gcc isn't at /usr/bin/gcc, or we need
