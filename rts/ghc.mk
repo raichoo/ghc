@@ -182,34 +182,29 @@ rts_$1_CMM_OBJS = $$(patsubst rts/%.cmm,rts/dist/build/%.$$($1_osuf),$$(rts_CMM_
 rts_$1_OBJS = $$(rts_$1_C_OBJS) $$(rts_$1_S_OBJS) $$(rts_$1_CMM_OBJS)
 
 ifneq "$$(findstring $(TargetOS_CPP), linux solaris2 freebsd)" ""
-NEED_DTRACE_PROBES_OBJ = YES
+
+ifeq "$$(TargetOS_CPP)" "freebsd"
+ifneq "$$(findstring dyn, $1)" ""
+NEED_DTRACE_PROBES_OBJ_$1 = YES
 else
-NEED_DTRACE_PROBES_OBJ = NO
+NEED_DTRACE_PROBES_OBJ_$1 = NO
+endif
+else
+NEED_DTRACE_PROBES_OBJ_$1= YES
+endif
+
 endif
 
 ifeq "$(USE_DTRACE)" "YES"
-ifeq "$(NEED_DTRACE_PROBES_OBJ)" "YES"
+ifeq "$$(NEED_DTRACE_PROBES_OBJ_$1)" "YES"
 # On Darwin we don't need to generate binary containing probes defined
 # in DTrace script, but DTrace on Solaris expects generation of binary
 # from the DTrace probes definitions
 
-ifneq "$$(findstring $(TargetOS_CPP), freebsd)" ""
-
-ifneq "$$(findstring dyn, $1)" ""
 rts_$1_DTRACE_OBJS = rts/dist/build/RtsProbes.$$($1_osuf)
 rts/dist/build/RtsProbes.$$($1_osuf) : $$(rts_$1_OBJS)
 	$(DTRACE) -G -C $$(addprefix -I,$$(GHC_INCLUDE_DIRS)) -DDTRACE -s rts/RtsProbes.d -o \
 		$$@ $$(rts_$1_OBJS)
-else
-rts_$1_DTRACE_OBJS =
-endif
-
-else
-rts_$1_DTRACE_OBJS = rts/dist/build/RtsProbes.$$($1_osuf)
-rts/dist/build/RtsProbes.$$($1_osuf) : $$(rts_$1_OBJS)
-	$(DTRACE) -G -C $$(addprefix -I,$$(GHC_INCLUDE_DIRS)) -DDTRACE -s rts/RtsProbes.d -o \
-		$$@ $$(rts_$1_OBJS)
-endif
 
 endif
 endif
