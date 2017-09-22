@@ -206,6 +206,9 @@ rts/dist/build/RtsProbes.$$($1_osuf) : $$(rts_$1_OBJS)
 	$(DTRACE) -G -C $$(addprefix -I,$$(GHC_INCLUDE_DIRS)) -DDTRACE -s rts/RtsProbes.d -o \
 		$$@ $$(rts_$1_OBJS)
 
+else
+rts_$1_DTRACE_OBJS =
+
 endif
 endif
 
